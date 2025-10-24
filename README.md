@@ -49,7 +49,7 @@ pip install -r requirements.txt
 ```bash
 python earthworks_automation.py lab_data_earthworks.xlsx --outdir outputs
 ```
-If --outdir is omitted, outputs will be saved in the default folder: `outputs/`.
+If \--outdir` is omitted, outputs are saved to `outputs/`.`
 ---
 ## What You Get
 `outputs/lab_curves.png` — combined moisture content axis plot (Dry Density, CBR, Su, MCV)
