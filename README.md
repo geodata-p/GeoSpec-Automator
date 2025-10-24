@@ -5,6 +5,9 @@ Automates the Earthworks lab → specification step from a single Excel file (Dr
 Generates a combined plot and a one-page PDF summary with OMC, MDD, and site target parameters.
 
 **Goal:** reduce manual work and make the lab → spec process traceable and reproducible.
+---
+## Why it matters
+Earthworks design often relies on manual lab data and inconsistent formats. This tool streamlines QA/QC, minimises transcription errors, and keeps a transparent data trail—ready for digital delivery and BIM (Building Information Modelling)–integrated workflows.
 
 ---
 
@@ -34,7 +37,7 @@ A single workbook with the following sheets (case-sensitive):
 
 ---
 
-## Install
+## Installation
 Tested with Python 3.13 (compatible with 3.11+)
 
 > In Anaconda Prompt, first navigate to your project folder (`cd path/to/project`), then run:
@@ -45,20 +48,22 @@ conda activate ew
 pip install -r requirements.txt
 ```
 
-## Run
+## Usage
 ```bash
 python earthworks_automation.py lab_data_earthworks.xlsx --outdir outputs
 ```
-If \--outdir` is omitted, outputs are saved to `outputs/`.`
+If `--outdir` is omitted, outputs are saved to `outputs/`.
+
+
 ---
-## What You Get
+## Outputs
 `outputs/lab_curves.png` — combined moisture content axis plot (Dry Density, CBR, Su, MCV)
 
 `outputs/spec_summary_YYYYMMDD_HHMM.pdf` — one-page summary with derived site targets
 
 <p align="center"> <img src="outputs/lab_curves.png" width="700"> </p>
 
-## Notes / Limits
+## Notes & Limits
 Uses polynomial fits; no outlier removal
 Warns if OMC + 1% lies outside the lab moisture range (extrapolation)
 Intended as a digital helper tool — final project specifications take precedence
@@ -69,4 +74,6 @@ KTP Associate · Leeds Beckett University × Borehole Solutions
 Focused on data-driven geotechnical design and automation.
 
 ## License
-MIT — see LICENSE.
+Licensed under the [MIT License](LICENSE)
+
+
