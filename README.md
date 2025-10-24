@@ -72,10 +72,13 @@ Intended as a digital helper tool — final project specifications take preceden
 
 ## Author
 Pooneh Shah Malekpoor, PhD (Geotechnical Engineering)
+
 KTP Associate · Leeds Beckett University × Borehole Solutions
+
 Focused on data-driven geotechnical design and automation.
 
 ## License
+
 Licensed under the [MIT License](LICENSE)
 
 
