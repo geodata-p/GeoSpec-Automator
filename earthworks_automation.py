@@ -139,9 +139,18 @@ su_coeffs,  su_xg,  su_yg,  su_deg  = poly_fit_over_range(w_su,  su_lab)
 cbr_target = float(np.polyval(cbr_coeffs, w_target)) if cbr_coeffs is not None else np.nan
 su_target  = float(np.polyval(su_coeffs,  w_target)) if su_coeffs  is not None else np.nan
 
-# MCV bounds by direct interpolation at OMC ±1%
-mcv_lower  = interp_at(OMC - 1.0, w_mcv, mcv_lab) if len(w_mcv) > 1 else np.nan
-mcv_upper  = interp_at(OMC + 1.0, w_mcv, mcv_lab) if len(w_mcv) > 1 else np.nan
+
+# --------------------------- Fit for MCV(w) ---------------------------
+# Fit polynomial to MCV vs Moisture (deg=2 unless only 2 pts → deg=1)
+mcv_coeffs, mcv_xg, mcv_yg, mcv_deg = poly_fit_over_range(w_mcv, mcv_lab)
+
+# MCV bounds at OMC ±1% from fitted curve (fallback to interpolation if no fit)
+if mcv_coeffs is not None:
+    mcv_lower = float(np.polyval(mcv_coeffs, OMC - 1.0))
+    mcv_upper = float(np.polyval(mcv_coeffs, OMC + 1.0))
+else:
+    mcv_lower = interp_at(OMC - 1.0, w_mcv, mcv_lab) if len(w_mcv) > 1 else np.nan
+    mcv_upper = interp_at(OMC + 1.0, w_mcv, mcv_lab) if len(w_mcv) > 1 else np.nan
 
 # --------------------------- Results ---------------------------
 print("\n=== Derived from LAB curves ===")
@@ -185,10 +194,16 @@ ax3.set_ylabel("Su (kPa)", color='royalblue')
 # MCV (green)
 ax4 = ax1.twinx(); ax4.spines["right"].set_position(("axes",1.24))
 ax4.scatter(w_mcv, mcv_lab, color='#2E8B57', marker='D', label="MCV (lab)")
-ax4.plot(w_mcv, mcv_lab, color='#2E8B57', linestyle='--', alpha=0.7)
+if mcv_xg is not None:
+    ax4.plot(mcv_xg, mcv_yg, color='#2E8B57', linestyle='--', alpha=0.9,
+             label=f"MCV fit (deg {mcv_deg})")
+else:
+    order = np.argsort(w_mcv)
+    ax4.plot(w_mcv[order], mcv_lab[order], color='#2E8B57', linestyle='--', alpha=0.7)
 ax4.scatter([OMC - 1.0, OMC + 1.0], [mcv_lower, mcv_upper],
             color='#2E8B57', s=100, label="MCV @ OMC ± 1%")
 ax4.set_ylabel("MCV", color='#2E8B57')
+
 
 # Combined legend
 handles, labels = [], []
@@ -225,6 +240,12 @@ y -= 7*mm
 c.drawString(margin, y, "Source: Uploaded laboratory Excel data")
 y -= 10*mm
 
+# Note for MCV range depending on method used
+mcv_note = ("OMC−1% to OMC+1% (from fitted curve)"
+            if mcv_coeffs is not None
+            else "OMC−1% to OMC+1% (interp)")
+
+
 data = [
     ["Parameter", "Value", "Notes"],
     ["Optimum Moisture (OMC)", f"{OMC:.2f} %", ""],
@@ -233,7 +254,7 @@ data = [
     ["Reference Moisture", f"{w_target:.2f} %", "OMC + 1%"],
     ["CBR @ OMC + 1%", f"≥ {cbr_target:.2f} %", "From fitted curve"],
     ["Su @ OMC + 1%", f"≥ {su_target:.2f} kPa", "From fitted curve"],
-    ["Eligible MCV range", f"{min(mcv_lower,mcv_upper):.2f} – {max(mcv_lower,mcv_upper):.2f}", "OMC−1% to OMC+1% (interp)"],
+    ["Eligible MCV range", f"{min(mcv_lower,mcv_upper):.2f} – {max(mcv_lower,mcv_upper):.2f}", mcv_note],
 ]
 t = Table(data, colWidths=[60*mm, 35*mm, 70*mm])
 t.setStyle(TableStyle([
