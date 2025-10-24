@@ -101,10 +101,57 @@ w_mcv, mcv_lab = df_mcv["Moisture"].values,     df_mcv["MCV"].values
 if len(w_lab) < 3:
     sys.exit("❌ Need at least 3 data points for DryDensity to fit a quadratic curve.")
 
-# --------------------------- Fit quadratic to dry density ---------------------------
-a, b, c = np.polyfit(w_lab, rho_lab, 2)
+# --------------------------- Best-fit (1..3) to dry density ---------------------------
+# generic grid for evaluating smooth curve & finding OMC/MDD
 grid = np.linspace(float(np.nanmin(w_lab)), float(np.nanmax(w_lab)), 1001)
-rho_fit = a*grid**2 + b*grid + c
+
+def poly_fit_over_range(x, y, max_deg=2):
+    """
+    Fit polynomial of degree 1..max_deg (bounded by data count) and choose the best by R².
+    Returns: coeffs, x_grid, y_fit_on_grid, chosen_degree, r2
+    """
+    x, y = np.asarray(x, float), np.asarray(y, float)
+
+    # Need at least 2 points to fit anything
+    if len(x) < 2:
+        return None, None, None, None, None
+
+    # Limit degree by number of points (need deg+1 points minimum)
+    max_try = min(max_deg, len(x) - 1)
+
+    best_r2 = -np.inf
+    best_deg = None
+    best_coeffs = None
+
+    # Sort inputs to make grids nice and avoid weird conditioning
+    order = np.argsort(x)
+    xs, ys = x[order], y[order]
+
+    for deg in range(1, max_try + 1):
+        try:
+            coeffs = np.polyfit(xs, ys, deg)
+            y_pred = np.polyval(coeffs, xs)
+            ss_res = np.sum((ys - y_pred) ** 2)
+            ss_tot = np.sum((ys - np.mean(ys)) ** 2)
+            r2 = 1 - ss_res / ss_tot if ss_tot > 0 else 0.0
+            if r2 > best_r2:
+                best_r2, best_deg, best_coeffs = r2, deg, coeffs
+        except np.linalg.LinAlgError:
+            # Skip degrees that fail to fit (e.g., singular matrix)
+            continue
+
+    if best_coeffs is None:
+        return None, None, None, None, None
+
+    xg = np.linspace(float(np.nanmin(xs)), float(np.nanmax(xs)), 500)
+    yg = np.polyval(best_coeffs, xg)
+    return best_coeffs, xg, yg, best_deg, best_r2
+
+
+
+# Dry density best fit
+density_coeffs, dens_xg, dens_yg, dens_deg, dens_r2 = poly_fit_over_range(w_lab, rho_lab)
+rho_fit = np.polyval(density_coeffs, grid)
 OMC = grid[np.argmax(rho_fit)]
 MDD = float(np.max(rho_fit))
 site_min_density = 0.95 * MDD
@@ -116,35 +163,62 @@ if not (wmin <= w_target <= wmax):
     print(f"⚠️ Note: w_target = {w_target:.2f}% is outside lab moisture range ({wmin:.2f}–{wmax:.2f}%). Interpolations may extrapolate.")
 
 # --------------------------- Helpers ---------------------------
-def poly_fit_over_range(x, y):
-    """Return coeffs, x_grid, y_fit, degree (1 if 2 pts else 2)."""
-    x, y = np.asarray(x,float), np.asarray(y,float)
+def poly_fit_over_range(x, y, max_deg=2):
+    """
+    Fit polynomial of degree 1..max_deg (bounded by data count) and choose the best by R².
+    Returns: coeffs, x_grid, y_fit_on_grid, chosen_degree, r2
+    """
+    x, y = np.asarray(x, float), np.asarray(y, float)
+
+    # Need at least 2 points to fit anything
     if len(x) < 2:
-        return None, None, None, None
-    deg = 1 if len(x)==2 else 2
-    coeffs = np.polyfit(x, y, deg)
-    xg = np.linspace(float(np.nanmin(x)), float(np.nanmax(x)), 500)
-    yg = np.polyval(coeffs, xg)
-    return coeffs, xg, yg, deg
+        return None, None, None, None, None
+
+    # Limit degree by number of points (need deg+1 points minimum)
+    max_try = min(max_deg, len(x) - 1)
+
+    best_r2 = -np.inf
+    best_deg = None
+    best_coeffs = None
+
+    # Sort inputs for stability
+    order = np.argsort(x)
+    xs, ys = x[order], y[order]
+
+    for deg in range(1, max_try + 1):
+        try:
+            coeffs = np.polyfit(xs, ys, deg)
+            y_pred = np.polyval(coeffs, xs)
+            ss_res = np.sum((ys - y_pred) ** 2)
+            ss_tot = np.sum((ys - np.mean(ys)) ** 2)
+            r2 = 1 - ss_res / ss_tot if ss_tot > 0 else 0.0
+            if r2 > best_r2:
+                best_r2, best_deg, best_coeffs = r2, deg, coeffs
+        except np.linalg.LinAlgError:
+            continue
+
+    if best_coeffs is None:
+        return None, None, None, None, None
+
+    xg = np.linspace(float(np.nanmin(xs)), float(np.nanmax(xs)), 500)
+    yg = np.polyval(best_coeffs, xg)
+    return best_coeffs, xg, yg, best_deg, best_r2
 
 def interp_at(x, xp, fp):
     idx = np.argsort(xp)
     return float(np.interp(x, xp[idx], fp[idx]))
 
-# --------------------------- Fits for CBR(w) and Su(w) ---------------------------
-cbr_coeffs, cbr_xg, cbr_yg, cbr_deg = poly_fit_over_range(w_cbr, cbr_lab)
-su_coeffs,  su_xg,  su_yg,  su_deg  = poly_fit_over_range(w_su,  su_lab)
+
+# --------------------------- Best-fits for CBR(w), Su(w), and MCV(w) ---------------------------
+cbr_coeffs, cbr_xg, cbr_yg, cbr_deg, cbr_r2 = poly_fit_over_range(w_cbr, cbr_lab)
+su_coeffs,  su_xg,  su_yg,  su_deg,  su_r2  = poly_fit_over_range(w_su,  su_lab)
+mcv_coeffs, mcv_xg, mcv_yg, mcv_deg, mcv_r2 = poly_fit_over_range(w_mcv, mcv_lab)
 
 # Targets aligned to fitted curves at OMC + 1%
 cbr_target = float(np.polyval(cbr_coeffs, w_target)) if cbr_coeffs is not None else np.nan
 su_target  = float(np.polyval(su_coeffs,  w_target)) if su_coeffs  is not None else np.nan
 
-
-# --------------------------- Fit for MCV(w) ---------------------------
-# Fit polynomial to MCV vs Moisture (deg=2 unless only 2 pts → deg=1)
-mcv_coeffs, mcv_xg, mcv_yg, mcv_deg = poly_fit_over_range(w_mcv, mcv_lab)
-
-# MCV bounds at OMC ±1% from fitted curve (fallback to interpolation if no fit)
+# MCV bounds at OMC ±1% (fallback to interpolation if fit fails)
 if mcv_coeffs is not None:
     mcv_lower = float(np.polyval(mcv_coeffs, OMC - 1.0))
     mcv_upper = float(np.polyval(mcv_coeffs, OMC + 1.0))
@@ -162,11 +236,17 @@ print(f"Minimum on-site CBR:             ≥ {cbr_target:.2f} %  @ {w_target:.2f
 print(f"Minimum on-site Su:              ≥ {su_target:.2f} kPa @ {w_target:.2f}%")
 print(f"Eligible field MCV range:        {min(mcv_lower,mcv_upper):.2f} – {max(mcv_lower,mcv_upper):.2f} (from OMC−1% to OMC+1%)")
 
+print("\n=== Fit diagnostics (degree, R²) ===")
+print(f"Dry density: deg {dens_deg}, R²={dens_r2:.3f}")
+print(f"CBR:         deg {cbr_deg}, R²={cbr_r2:.3f}")
+print(f"Su:          deg {su_deg},  R²={su_r2:.3f}")
+print(f"MCV:         deg {mcv_deg}, R²={mcv_r2:.3f}")
+
 # --------------------------- Plot ---------------------------
 fig, ax1 = plt.subplots(figsize=(9,6))
 
 # Dry density (fit + points)
-ax1.plot(grid, rho_fit, color='black', label="Dry density (fit)")
+ax1.plot(grid, rho_fit, color='black', label=f"Dry density (fit, deg {dens_deg}, R²={dens_r2:.2f})")
 ax1.scatter(w_lab, rho_lab, color='black', marker='o', label="Dry density (lab)")
 ax1.axvline(OMC, color='#800080', linestyle='--', linewidth=2.0, label=f"OMC = {OMC:.2f}%")
 ax1.axvline(OMC - 1.0, color='orange', linestyle=':', alpha=0.9, label="OMC − 1%")
@@ -179,7 +259,12 @@ ax1.set_ylabel("Dry density (Mg/m³)")
 ax2 = ax1.twinx()
 ax2.scatter(w_cbr, cbr_lab, color='#B22222', marker='s', label="CBR (lab)")
 if cbr_xg is not None:
-    ax2.plot(cbr_xg, cbr_yg, color='#B22222', linestyle='-.', label=f"CBR fit (deg {cbr_deg})")
+    ax2.plot(
+        cbr_xg, cbr_yg,
+        color='#B22222', linestyle='-.',
+        label=f"CBR fit (deg {cbr_deg}, R²={cbr_r2:.2f})"
+    )
+
 ax2.scatter([w_target],[cbr_target], color='#B22222', marker='*', s=120, label="CBR @ OMC + 1% (on fit)")
 ax2.set_ylabel("CBR (%)", color='#B22222')
 
@@ -187,7 +272,12 @@ ax2.set_ylabel("CBR (%)", color='#B22222')
 ax3 = ax1.twinx(); ax3.spines["right"].set_position(("axes",1.12))
 ax3.scatter(w_su, su_lab, color='royalblue', marker='^', label="Su (lab)")
 if su_xg is not None:
-    ax3.plot(su_xg, su_yg, color='royalblue', linestyle=':', label=f"Su fit (deg {su_deg})")
+    ax3.plot(
+        su_xg, su_yg,
+        color='royalblue', linestyle=':',
+        label=f"Su fit (deg {su_deg}, R²={su_r2:.2f})"
+    )
+
 ax3.scatter([w_target],[su_target], color='royalblue', marker='*', s=120, label="Su @ OMC + 1%")
 ax3.set_ylabel("Su (kPa)", color='royalblue')
 
@@ -195,11 +285,18 @@ ax3.set_ylabel("Su (kPa)", color='royalblue')
 ax4 = ax1.twinx(); ax4.spines["right"].set_position(("axes",1.24))
 ax4.scatter(w_mcv, mcv_lab, color='#2E8B57', marker='D', label="MCV (lab)")
 if mcv_xg is not None:
-    ax4.plot(mcv_xg, mcv_yg, color='#2E8B57', linestyle='--', alpha=0.9,
-             label=f"MCV fit (deg {mcv_deg})")
+    ax4.plot(
+        mcv_xg, mcv_yg,
+        color='#2E8B57', linestyle='--', alpha=0.9,
+        label=f"MCV fit (deg {mcv_deg}, R²={mcv_r2:.2f})"
+    )
 else:
     order = np.argsort(w_mcv)
-    ax4.plot(w_mcv[order], mcv_lab[order], color='#2E8B57', linestyle='--', alpha=0.7)
+    ax4.plot(
+        w_mcv[order], mcv_lab[order],
+        color='#2E8B57', linestyle='--', alpha=0.7
+    )
+
 ax4.scatter([OMC - 1.0, OMC + 1.0], [mcv_lower, mcv_upper],
             color='#2E8B57', s=100, label="MCV @ OMC ± 1%")
 ax4.set_ylabel("MCV", color='#2E8B57')
