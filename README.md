@@ -65,7 +65,9 @@ If `--outdir` is omitted, outputs are saved to `outputs/`.
 
 ## Notes & Limits
 Uses polynomial fits; no outlier removal
+
 Warns if OMC + 1% lies outside the lab moisture range (extrapolation)
+
 Intended as a digital helper tool — final project specifications take precedence
 
 ## Author
