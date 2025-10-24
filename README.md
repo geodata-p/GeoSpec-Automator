@@ -5,11 +5,11 @@ Automates the Earthworks lab → specification step from a single Excel file (Dr
 Generates a combined plot and a one-page PDF summary with OMC, MDD, and site target parameters.
 
 **Goal:** reduce manual work and make the lab → spec process traceable and reproducible.
----
+
 ## Why it matters
 Earthworks design often relies on manual lab data and inconsistent formats. This tool streamlines QA/QC, minimises transcription errors, and keeps a transparent data trail—ready for digital delivery and BIM (Building Information Modelling)–integrated workflows.
 
----
+
 
 ## What it does
 - Validates the input Excel (sheet names and required columns)
@@ -23,7 +23,7 @@ Earthworks design often relies on manual lab data and inconsistent formats. This
 
 > Engineer’s specification always governs. Values are derived from supplied lab data.
 
----
+
 
 ## Input (Excel)
 A single workbook with the following sheets (case-sensitive):
@@ -35,7 +35,7 @@ A single workbook with the following sheets (case-sensitive):
 | Su            | `Moisture`, `Su`            | (kPa)        |
 | MCV           | `Moisture`, `MCV`           | (index)      |
 
----
+
 
 ## Installation
 Tested with Python 3.13 (compatible with 3.11+)
@@ -55,7 +55,7 @@ python earthworks_automation.py lab_data_earthworks.xlsx --outdir outputs
 If `--outdir` is omitted, outputs are saved to `outputs/`.
 
 
----
+
 ## Outputs
 `outputs/lab_curves.png` — combined moisture content axis plot (Dry Density, CBR, Su, MCV)
 
