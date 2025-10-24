@@ -1,56 +1,63 @@
 # GeoSpec-Automator
-Automating geotechnical insight from lab to specification — faster, cleaner, smarter.
-
-A Python-based CLI tool that converts Earthworks lab data (Dry Density, CBR, Su, MCV) into validated plots and one-page specification summaries.
-Designed for data-driven geotechnical decision-making and digital workflows in ground engineering.
-
-
-
-# Earthworks Lab → Spec Automation (Python CLI)
-
-Turn a single Excel workbook of lab tests into **site-ready targets + a PDF summary** in one minute.
-
-**Inputs:** One Excel file with four sheets  
-**Outputs:** PNG plot + PDF summary report 
+![Python](https://img.shields.io/badge/Python-3.11%2B-blue) ![License](https://img.shields.io/badge/License-MIT-green)
+![License](https://img.shields.io/badge/License-MIT-green)
+Automates the earthworks lab → spec step from a single Excel (Dry Density, CBR, Su, MCV).  
+Outputs a combined plot and a one-page PDF summary with OMC/MDD and site targets.
 
 
-## Why It Matters
-Geotechnical engineers spend hours moving numbers from spreadsheets into reports or specs.
-GeoSpec-Automator bridges that gap by combining engineering logic with automation:
+Goal: reduce copy-paste and make the lab → spec step reproducible.
 
-✅ Performs QA/QC on uploaded data (range validation, missing value checks)
-📈 Fits the compaction curve to find OMC and MDD automatically
-🧮 Derives site targets:
-                        ≥95% MDD
-                        CBR & Su at OMC + 1%
-                        MCV range at OMC ± 1%
+---
 
-🧾 Exports a plot and one-page PDF summary ready for design documentation
-> _Engineer’s specification always governs. Values are derived from the supplied lab data._
+## What it does
+- Checks the Excel has the expected sheets/columns.
+- Basic QA/QC: flags values outside simple ranges and drops blanks.
+- Fits the dry density curve to get **OMC** and **MDD**.
+- Derives site targets:
+  - ≥ 95% MDD
+  - CBR & Su evaluated at **OMC + 1%**
+  - MCV range at **OMC ± 1%**
+- Exports a plot and a short PDF summary for reports.
 
+> Engineer’s specification always governs. Values are derived from the supplied lab data.
 
-## What You Get
-- `outputs/lab_curves.png` — combined moisture content axis with Dry Density, CBR, Su, MCV  
-- `outputs/spec_summary_YYYYMMDD_HHMM.pdf` — one-page summary report with derived site parameters
+---
 
+## Input (Excel)
+One file with these sheets/columns (case-sensitive):
+- **DryDensity**: `Moisture`, `DryDensity` (Mg/m³)
+- **CBR**: `Moisture`, `CBR` (%)
+- **Su**: `Moisture`, `Su` (kPa)
+- **MCV**: `Moisture`, `MCV` (index)
 
+---
 
-## Installation
+## Install
+Tested with Python 3.13 (works on 3.11+).
 
-Using Anaconda (Windows/Mac/Linux):
-
-conda create -n ew python=3.11+ -y
+```bash
+conda create -n ew python=3.13 -y
 conda activate ew
+go to the project folder by cd... in anaconda prompt window
 pip install -r requirements.txt
 
-_Tested with Python 3.13 (compatible with 3.11+)._
+---
 
-
-
-# How to Run
+Run
 python earthworks_automation.py lab_data_earthworks.xlsx --outdir outputs
+If --outdir is omitted, outputs go to outputs/ by default.
 
 
+Outputs
+outputs/lab_curves.png — shared moisture axis with Dry Density, CBR, Su, MCV
+outputs/spec_summary_YYYYMMDD_HHMM.pdf — one-page summary with OMC, MDD, targets
 
 
+Notes / limits
+Simple polynomial fits; no outlier removal.
+Extrapolation is flagged if OMC+1% is outside the lab moisture range.
+Intended as a helper script; final project specifications take precedence.
 
+
+conda activate ew
+pip install -r requirements.txt
