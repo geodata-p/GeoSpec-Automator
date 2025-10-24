@@ -1,5 +1,6 @@
 # GeoSpec-Automator
-![Python](https://img.shields.io/badge/Python-3.11%2B-blue) ![License](https://img.shields.io/badge/License-MIT-green)
+![Python](https://img.shields.io/badge/Python-3.11%2B-blue) 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Automates the Earthworks lab → specification step from a single Excel file (Dry Density, CBR, Su, MCV).  
 Generates a combined plot and a one-page PDF summary with OMC, MDD, and site target parameters.
